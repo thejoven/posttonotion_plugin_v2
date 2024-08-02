@@ -1,4 +1,4 @@
-
+/.idea
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
@@ -40,3 +40,7 @@ keys.json
 
 # typescript
 .tsbuildinfo
+
+package-lock.json
+
+pnpm-lock.yaml

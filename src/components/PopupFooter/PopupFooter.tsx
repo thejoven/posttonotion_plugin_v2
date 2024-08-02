@@ -28,7 +28,7 @@ export const PopupFooter: React.FC = () => {
 				<Button
 					size='small'
 					onClick={openOptions}
-				>设置</Button>
+				>setting</Button>
 			</Space>
 		</div>
 	);

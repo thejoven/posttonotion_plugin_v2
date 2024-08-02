@@ -18,7 +18,7 @@ dayjs.locale('zh-cn');
 
 const HeaderItems: HeaderProps[] = [
 	{
-		name: '官网',
+		name: 'plugin website',
 		url: 'https://www.posttonotion.com/',
 	},
 ];

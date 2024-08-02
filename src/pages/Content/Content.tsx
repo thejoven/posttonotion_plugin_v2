@@ -31,22 +31,22 @@ interface routerIndex {
 export const routerConfig: routerIndex[] = [
 	{
 		key: 'main-setting',
-		label: '接口设置',
+		label: 'Setting',
 		render: <MainSetting />,
 		isShow: true
 	},
-	{
-		key: 'user-setting',
-		label: '个人账号',
-		render: <UserSetting />,
-		isShow: true
-	},
-	{
-		key: 'user-register',
-		label: '注册账号',
-		render: <Register />,
-		isShow: false
-	},
+	// {
+	// 	key: 'user-setting',
+	// 	label: '个人账号',
+	// 	render: <UserSetting />,
+	// 	isShow: true
+	// },
+	// {
+	// 	key: 'user-register',
+	// 	label: '注册账号',
+	// 	render: <Register />,
+	// 	isShow: false
+	// },
 	{
 		key: '*',
 		render: <MainSetting />,

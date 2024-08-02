@@ -1,7 +1,27 @@
-import { Storage } from '@plasmohq/storage';
 
-// import { API, log } from './utils';
+const requestHeaders: { [key: string]: string } = {};
 
-export {};
+chrome.action.setBadgeBackgroundColor({ color: "#1CA8FE" });
 
-// const storage = new Storage();
+// Listener for modifying request headers
+chrome.webRequest.onBeforeSendHeaders.addListener((details) => {
+  // console.log(details.url)
+  // console.log(details)
+  for (let header of details.requestHeaders) {
+    if (header.name === "x-csrf-token") {
+      requestHeaders["x-csrf-token"] = header.value;
+    } else if (header.name === "authorization") {
+      requestHeaders["authorization"] = header.value;
+    }
+  }
+  // console.log(requestHeaders)
+  return { requestHeaders: details.requestHeaders };
+}, { urls: ["*://x.com/*"] }, ["requestHeaders"]);
+
+// Message listener to handle requests from content script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "getRequestHeaders") {
+    sendResponse(requestHeaders);
+  }
+  return true; // Indicate that the response will be sent asynchronously
+});

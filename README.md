@@ -1,12 +1,6 @@
-
-//"permissions": [
-//"contextMenus",
-//"cookies",
-//"notifications",
-//"alarms"
-//]
-
-
-    "host_permissions": [
-      "https://*/*"
-    ],
+```
+nvm use v18
+pnpm install
+pnpm dev
+pnpm build
+```

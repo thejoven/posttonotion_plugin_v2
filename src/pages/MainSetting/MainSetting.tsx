@@ -31,7 +31,7 @@ export const MainSetting: React.FC = () => {
 				size={'middle'}
 			>
 				<Form.Item
-					label={'悬浮窗开关'}
+					label={'Floating switch'}
 					name={'isFloatRow'}
 				>
 					<Switch
@@ -44,10 +44,10 @@ export const MainSetting: React.FC = () => {
 				<Form.Item
 					label={'Apikey'}
 					name={'apikey'}
-					extra={<span style={{ fontSize: '8px' }}>请输入登陆后的APIKEY,一般为fkt为开头</span>}
+					extra={<span style={{ fontSize: '8px' }}>Please enter the APIKEY after logging in.</span>}
 				>
 					<Input
-						placeholder={'请输入您的 Apikey'}
+						placeholder={'enter the APIKEY'}
 						value={getApiKey}
 						onChange={(e) => {
 							setApikey(e.target.value);
@@ -55,9 +55,9 @@ export const MainSetting: React.FC = () => {
 					/>
 				</Form.Item>
 				<Form.Item
-					label={'常用标签'}
+					label={'Common tags'}
 					name={'tags'}
-					extra={<span style={{ fontSize: '8px' }}>使用逗号,分隔</span>}
+					extra={<span style={{ fontSize: '8px' }}>Use commas to separate.</span>}
 				>
 					<Input.TextArea
 						placeholder={'请输入您常用的标签'}

@@ -27,7 +27,7 @@ function Popup() {
 		>
 			<div className='main'>
 				<div className='main_text'>
-					<h1>post to notion v1.0</h1>
+					<h1>post to notion</h1>
 				</div>
 				<PopupFooter></PopupFooter>
 			</div>

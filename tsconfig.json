@@ -5,10 +5,8 @@
   ],
   "include": [
     ".plasmo/index.d.ts",
-    ".plasmo/**/*",
     "./**/*.ts",
-    "./**/*.tsx",
-    "node_modules/.pnpm/@types+chrome@0.0.206/node_modules/@types/chrome/*.d.ts"
+    "./**/*.tsx"
   ],
   "compilerOptions": {
     "paths": {

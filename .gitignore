@@ -1,9 +1,3 @@
-/.idea
-/.github
-
-/.plasmo
-/.vscode
-/build
 
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
@@ -17,8 +11,6 @@
 
 #cache
 .turbo
-.next
-.vercel
 
 # misc
 .DS_Store
@@ -29,7 +21,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-
 
 # local env files
 .env*
@@ -46,7 +37,3 @@ keys.json
 
 # typescript
 .tsbuildinfo
-
-package-lock.json
-
-pnpm-lock.yaml

@@ -1,12 +1,16 @@
-
 const requestHeaders: { [key: string]: string } = {};
 
-chrome.action.setBadgeBackgroundColor({ color: "#1CA8FE" });
+chrome.action.onClicked.addListener(() => {
+    chrome.tabs.create({ url: 'options.html' })
+})
+
+
+
 
 // Listener for modifying request headers
 chrome.webRequest.onBeforeSendHeaders.addListener((details) => {
-  // console.log(details.url)
-  // console.log(details)
+   console.log(details.url)
+   console.log(details)
   for (let header of details.requestHeaders) {
     if (header.name === "x-csrf-token") {
       requestHeaders["x-csrf-token"] = header.value;
@@ -14,7 +18,7 @@ chrome.webRequest.onBeforeSendHeaders.addListener((details) => {
       requestHeaders["authorization"] = header.value;
     }
   }
-  // console.log(requestHeaders)
+   console.log(requestHeaders)
   return { requestHeaders: details.requestHeaders };
 }, { urls: ["*://x.com/*"] }, ["requestHeaders"]);
 

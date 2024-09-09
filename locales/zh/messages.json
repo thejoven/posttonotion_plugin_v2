@@ -1,0 +1,41 @@
+{
+  "login_subtitle": {
+    "message": "x.com 书签管理替代方案，免费提升您的书签体验。"
+  },
+  "login_apikey": {
+    "message": "请输入Apikey..."
+  },
+  "login_login": {
+    "message": "登录"
+  },
+  "login_reg": {
+    "message": "注册"
+  },
+  "info_logout": {
+    "message": "登出"
+  },
+  "info_dashboard": {
+    "message": "仪表板"
+  },
+  "info_setting": {
+    "message": "设置"
+  },
+  "info_tutorial": {
+    "message": "教程"
+  },
+  "setting_error":{
+    "message": "错误提示"
+  },
+  "welcome":{
+    "message": "欢迎 "
+  },
+  "key":{
+     "message": "请在扩展选项中设置APIKEY。"
+  },
+  "sub_successful":{
+    "message":  "提交成功"
+ },
+ "sub_err":{
+    "message":  "请在推文页面中使用插件。"
+ }
+}

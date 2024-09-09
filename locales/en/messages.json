@@ -1,0 +1,43 @@
+{
+  "login_subtitle": {
+    "message": "Simplify and enhance yourbookmarking experience for free"
+  },
+  "login_apikey": {
+    "message": "Please enter Apikey..."
+  },
+  "login_login": {
+    "message": "Login"
+  },
+  "login_reg": {
+    "message": "Register"
+  },
+  "info_logout": {
+    "message": "logout"
+  },
+  "info_dashboard": {
+    "message": "Dashboard"
+  },
+  "info_setting": {
+    "message": "Setting"
+  },
+  "info_tutorial": {
+    "message": "Tutorial"
+  },
+  "setting_error":{
+    "message": "Error Message"
+  },
+  "welcome":{
+    "message": "Welcome "
+  },
+  "key":{
+     "message": "Please set your API key in the extension options"
+  },
+  "sub_successful":{
+     "message":  "Submission successful"
+  },
+  "sub_err":{
+    "message":  "Use on a separate tweet page"
+ }
+
+
+}

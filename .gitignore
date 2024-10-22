@@ -37,3 +37,21 @@ keys.json
 
 # typescript
 .tsbuildinfo
+
+# pnpm
+pnpm-lock.yaml
+
+# husky
+.husky
+
+# commitizen
+.czrc
+
+# ide
+.idea
+
+package-lock.json
+
+.gitignore
+
+.vscode

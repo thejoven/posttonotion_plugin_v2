@@ -7,10 +7,7 @@ import logoImage from "data-base64:~/assets/icon.png"
 import { callAPI_getSetting } from "~api"
 import { myStorage } from "~store"
 import "~style.css"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
-import { Loader, Key } from "lucide-react"
+import { SquareUserRound } from "lucide-react"
 import { sendToBackground } from "@plasmohq/messaging"
 
 
@@ -212,7 +209,7 @@ const showSuccessNotification = () => {
   notificationDiv.innerHTML = chrome.i18n.getMessage("sub_successful");
   notificationDiv.style.position = "fixed";
   notificationDiv.style.bottom = "20px";
-  notificationDiv.style.left = "60px";
+  notificationDiv.style.left = "40px";
   notificationDiv.style.backgroundColor = "green";
   notificationDiv.style.color = "white";
   notificationDiv.style.padding = "10px";
@@ -235,7 +232,7 @@ const showErrorNotification = (msg) => {
   notificationDiv.innerHTML = msg;
   notificationDiv.style.position = "fixed";
   notificationDiv.style.bottom = "20px";
-  notificationDiv.style.left = "60px";
+  notificationDiv.style.left = "40px";
   notificationDiv.style.backgroundColor = "red";
   notificationDiv.style.color = "white";
   notificationDiv.style.padding = "10px";
@@ -310,7 +307,7 @@ return (
                   transition={{ duration: 0.1 }}
                   className="text-gray-600 font-semibold text-sm"
                 >
-                  {generateSearchText(chrome.i18n.getMessage("login_login"))}
+                  <SquareUserRound />
                 </motion.span>
                 )}
               </AnimatePresence>
@@ -351,6 +348,19 @@ return (
               </motion.span>
               )}
             </AnimatePresence>
+            {isFullyExpanded && sentStates[-1] && (
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.1 }}
+                    className="pointer-events-none"
+                  >
+                     {sentStates[-1] === SendStatus.Sending &&  <Loader2 className="w-5 h-5 animate-spin text-gray-500" /> || 
+                      sentStates[-1] === SendStatus.Success && <CheckCircle2 className="w-5 h-5 text-green-500" /> || 
+                      sentStates[-1] === SendStatus.Failed &&  <CircleX className="w-5 h-5 text-red-500" />}   
+                  </motion.span>
+              )}
           </motion.button>
         </li>
         )}

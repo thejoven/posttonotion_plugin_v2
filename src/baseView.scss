@@ -1,0 +1,25 @@
+.footer{
+  a{
+    text-decoration: none;
+    font-size: 12px;
+  }
+
+  a:link {
+    color: rgba(0, 0, 0, 0.65);
+  }
+
+  /* 已被访问的链接 */
+  a:visited {
+    color: rgba(0, 0, 0, 0.65);
+  }
+
+  /* 将鼠标悬停在链接上 */
+  a:hover {
+    color: #1677ff;
+  }
+
+  /* 被选择的链接 */
+  a:active {
+    color: #1677ff;
+  }
+}

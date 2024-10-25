@@ -1,9 +1,9 @@
 import LoginView from "~views/loginView"
 import InfosView from "~views/infosView"
 
-import { ThemeProvider } from "~theme"
 import { myStorage } from "~store"
 import { useEffect, useState } from "react"
+import { BaseViewProvider } from "~baseView"
 
 function IndexOptions() {
   const [isLogin, setLogins] = useState(false)
@@ -17,12 +17,10 @@ function IndexOptions() {
     }
   )
 
-
-
   return (
-    <ThemeProvider>
+    <BaseViewProvider>
         {isLogin? <InfosView/> : <LoginView />}        
-    </ThemeProvider>
+    </BaseViewProvider>
   )
 }
 

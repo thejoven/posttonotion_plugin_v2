@@ -1,6 +1,6 @@
 {
   "login_subtitle": {
-    "message": "Simplify and enhance yourbookmarking experience for free"
+    "message": "x.com Simplify and enhance yourbookmarking experience for free"
   },
   "login_apikey": {
     "message": "Please enter Apikey..."
@@ -37,7 +37,10 @@
   },
   "sub_err":{
     "message":  "Use on a separate tweet page"
- }
+ },
+ "tag_ai":{
+  "message":  "AI Tags"
+}
 
 
 }

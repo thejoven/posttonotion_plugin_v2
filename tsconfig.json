@@ -10,10 +10,11 @@
   ],
   "compilerOptions": {
     "paths": {
-      "~*": [
-        "./src/*"
-      ]
+      "~*": ["./src/*"],
+      "@/*": ["./src/*"]
     },
-    "baseUrl": "."
+    "baseUrl": ".",
+    "jsx": "react-jsx"
+  
   }
 }

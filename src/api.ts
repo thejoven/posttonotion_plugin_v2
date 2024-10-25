@@ -3,7 +3,7 @@
 
 
 export const callAPI_getSetting = async <T>(apikey: string, errorCallback?: (error: any) => void) => {
-  return await callAPI('https://www.posttonotion.com/api/notion/setting', { method: 'GET' }, apikey);
+  return await callAPI('https://www.posttonotion.com/api/notion/setting', { method: 'GET' }, encodeURIComponent(apikey));
 };
  
 

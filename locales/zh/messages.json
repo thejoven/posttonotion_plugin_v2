@@ -37,5 +37,9 @@
  },
  "sub_err":{
     "message":  "请在推文页面中使用插件。"
+ },
+ "tag_ai":{
+    "message":  "AI自动分类"
  }
+ 
 }

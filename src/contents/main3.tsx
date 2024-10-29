@@ -139,7 +139,7 @@ const copytToNoion = async (tag:string, index:number) => {
         // 获取当前浏览器使用的语言：chrome.i18n.getUILanguage()
         var user_post_lange = chrome.i18n.getUILanguage();
         var data = {
-          tag: tags,
+          tag: tag,
           twtter_data: res,
           language_str: user_post_lange
         };

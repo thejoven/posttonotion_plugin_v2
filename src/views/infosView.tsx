@@ -1,15 +1,17 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState  } from 'react';
 import { myStorage } from "~store"
 import { callAPI_getSetting } from "~api"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { LayoutDashboard, Settings, Headphones, LogOut } from "lucide-react"
+import { showAlertAbove } from '~showAlert';
 
 function InfosView() {
   const {
     userInfo,
     apiKey,
+    tags,
     setUserInfo,
     setApiKey,
     setTags
@@ -19,13 +21,15 @@ function InfosView() {
     setUserInfo(null);
     setTags(null);
   };
+  
+  const [surl, setSurl] = useState('');  
 
   useEffect(() => {
     async function init() {
       if(!apiKey){
         return;
       }
-      
+      let isSetting = true;
       const data = await callAPI_getSetting(apiKey);
       if(!data['error']){
         if(data['user']){
@@ -37,8 +41,20 @@ function InfosView() {
         }
         if(data['setting'] && data['setting']['user_tag_list']){
           setTags(data['setting']['user_tag_list']);
+        }else{
+          setTags(null);
+          isSetting = false;
         }
-      }
+        if(!data['notion_raw']){
+          isSetting = false;
+        }
+        if(!isSetting){
+          showAlertAbove('btn_setting', chrome.i18n.getMessage("tip_setting"));
+          setSurl('?tutorial=1');
+        }else{
+          setSurl('');
+        }
+      }      
     }
     init()
   }, [apiKey])
@@ -59,7 +75,7 @@ function InfosView() {
                   <LayoutDashboard className="mr-2 h-4 w-4" />
                   {chrome.i18n.getMessage("info_dashboard")}
                 </Button>
-                <Button variant="outline" className="w-full" onClick={() => window.open('https://www.posttonotion.com/dashboard/setting', '_blank')}>
+                <Button id="btn_setting" variant="outline" className="w-full" onClick={() => window.open('https://www.posttonotion.com/dashboard/setting'+surl, '_blank')}>
                   <Settings className="mr-2 h-4 w-4" />
                   {chrome.i18n.getMessage("info_setting")}
                 </Button>

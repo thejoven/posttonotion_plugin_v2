@@ -32,6 +32,8 @@ const MainOverlay = () => {
   const [isPressed, setIsPressed] = useState(false)
   const [sentStates, setSentStates] = useState<{ [key: number]: SendStatus }>({});
   const [isFullyExpanded, setIsFullyExpanded] = useState(false)
+  const [isSetting, setIsSetting] = useState(false)
+
   enum SendStatus {
     Idle = 0,
     Sending = 1,
@@ -69,6 +71,12 @@ const MainOverlay = () => {
           setTags(data['setting']['user_tag_list']);
           setItems(data['setting']['user_tag_list'].split(','));
         }
+        if(!data['notion_raw']){
+          setIsSetting(true);
+          showErrorNotification(chrome.i18n.getMessage("tip_setting"));
+        }else{
+          setIsSetting(false);
+        }
       }
   };
 
@@ -85,13 +93,17 @@ const MainOverlay = () => {
   }
   
   const tagOnClick  = (tag:string, index:number) => {
-      var currentUrl = window.location.href;
-      var isTweetPage = tweetRegex.test(currentUrl);
-      if(!isTweetPage){
-        showErrorNotification(chrome.i18n.getMessage("sub_err"));
-        return
-      }
-      copytToNoion(tag,index);
+    if(isSetting){
+      showErrorNotification(chrome.i18n.getMessage("tip_setting"));
+      return
+    }
+    var currentUrl = window.location.href;
+    var isTweetPage = tweetRegex.test(currentUrl);
+    if(!isTweetPage){
+      showErrorNotification(chrome.i18n.getMessage("sub_err"));
+      return
+    }
+    copytToNoion(tag,index);
   }
       
 
@@ -136,6 +148,36 @@ const copytToNoion = async (tag:string, index:number) => {
     })
       .then((response) => response.json())
       .then((res) => {
+        if(res.data.threaded_conversation_with_injections_v2.instructions[0].entries[0].content.itemContent.tweet_results.result.article){
+          var tweetIds = ""; 
+          var entityMap = res.data.threaded_conversation_with_injections_v2.instructions[0].entries[0].content.itemContent.tweet_results.result.article.article_results.result.content_state.entityMap
+          for (const key in entityMap) {
+            if (entityMap.hasOwnProperty(key)) {
+              const element = entityMap[key];              
+              if(element.value.type == "TWEET"){{
+                if(tweetIds != "")
+                  tweetIds += "%2C"
+                tweetIds += "%22"+element.value.data.tweetId + "%22"
+              }}
+            }
+          }
+          console.log(tweetIds)
+          var url2 = `https://x.com/i/api/graphql/PTN9HhBAlpoCTHfspDgqLA/TweetResultsByRestIds?variables=%7B%22tweetIds%22:%5B${tweetIds}%5D,%22includePromotedContent%22:true,%22withBirdwatchNotes%22:true,%22withVoice%22:true,%22withCommunity%22:true%7D&features=%7B%22creator_subscriptions_tweet_preview_api_enabled%22:true,%22premium_content_api_read_enabled%22:false,%22communities_web_enable_tweet_community_results_fetch%22:true,%22c9s_tweet_anatomy_moderator_badge_enabled%22:true,%22responsive_web_grok_analyze_button_fetch_trends_enabled%22:false,%22responsive_web_grok_analyze_post_followups_enabled%22:true,%22responsive_web_grok_share_attachment_enabled%22:true,%22articles_preview_enabled%22:true,%22responsive_web_edit_tweet_api_enabled%22:true,%22graphql_is_translatable_rweb_tweet_is_translatable_enabled%22:true,%22view_counts_everywhere_api_enabled%22:true,%22longform_notetweets_consumption_enabled%22:true,%22responsive_web_twitter_article_tweet_consumption_enabled%22:true,%22tweet_awards_web_tipping_enabled%22:false,%22creator_subscriptions_quote_tweet_preview_enabled%22:false,%22freedom_of_speech_not_reach_fetch_enabled%22:true,%22standardized_nudges_misinfo%22:true,%22tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled%22:true,%22rweb_video_timestamps_enabled%22:true,%22longform_notetweets_rich_text_read_enabled%22:true,%22longform_notetweets_inline_media_enabled%22:true,%22profile_label_improvements_pcf_label_in_post_enabled%22:false,%22rweb_tipjar_consumption_enabled%22:true,%22responsive_web_graphql_exclude_directive_enabled%22:true,%22verified_phone_label_enabled%22:false,%22responsive_web_graphql_skip_user_profile_image_extensions_enabled%22:false,%22responsive_web_graphql_timeline_navigation_enabled%22:true,%22responsive_web_enhance_cards_enabled%22:false%7D`;
+          fetch(url2, {
+            method: "GET",
+            headers: headers,
+          }).then((response2) => response2.json())
+          .then((res2) => {
+            if(res2.data){
+              res.data.twees = res2.data.tweetResult;
+            }
+          }).catch((error) => {
+            // 处理错误
+            ChangStates(index,SendStatus.Failed);
+            console.error(error);
+          });
+        }        
+
         // 获取当前浏览器使用的语言：chrome.i18n.getUILanguage()
         var user_post_lange = chrome.i18n.getUILanguage();
         var data = {
@@ -143,6 +185,7 @@ const copytToNoion = async (tag:string, index:number) => {
           twtter_data: res,
           language_str: user_post_lange
         };
+        console.log(res);
         fetch("https://www.posttonotion.com/api/notion", {
           method: "POST",
           headers: {

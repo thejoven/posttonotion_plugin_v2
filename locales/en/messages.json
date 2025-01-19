@@ -9,7 +9,7 @@
     "message": "Login"
   },
   "login_reg": {
-    "message": "Register"
+    "message": "Register / Go to Post to Notion"
   },
   "info_logout": {
     "message": "logout"
@@ -40,7 +40,19 @@
  },
  "tag_ai":{
   "message":  "AI Tags"
-}
+},
+"get_key":{
+  "message":  "GetApikey"
+},
+"get_key_err":{
+   "message":  "Failed to retrieve Apikey, check if logged in correctly on Post to Notion"
+},
+"tip_login":{
+  "message":  "Go to register or log in"
+  },
+  "tip_setting":{
+    "message":  "Configuration not completed, please go to the official website to set up"
+  }
 
 
 }

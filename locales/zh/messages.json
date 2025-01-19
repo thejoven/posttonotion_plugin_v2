@@ -9,7 +9,7 @@
     "message": "登录"
   },
   "login_reg": {
-    "message": "注册"
+    "message": "注册 / 前往 Post to Notion"
   },
   "info_logout": {
     "message": "登出"
@@ -40,6 +40,18 @@
  },
  "tag_ai":{
     "message":  "AI自动分类"
- }
+ },
+ "get_key":{
+    "message":  "获取Apikey"
+ },
+ "get_key_err":{
+    "message":  "获取Apikey失败,查看是否在Post to Notion正确登录"
+ },
+ "tip_login":{
+  "message":  "前往注册或登录"
+  },
+  "tip_setting":{
+    "message":  "配置未完成,请前往官网设置"
+  }
  
 }

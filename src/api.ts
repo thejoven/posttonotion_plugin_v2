@@ -6,11 +6,14 @@ export const callAPI_getSetting = async <T>(apikey: string, errorCallback?: (err
   return await callAPI('https://www.posttonotion.com/api/notion/setting', { method: 'GET' }, encodeURIComponent(apikey));
 };
  
+export const callAPI_getUserInfo = async <T>(cookie: string, errorCallback?: (error: any) => void) => {
+  return await callAPI('https://www.posttonotion.com/api/auth/session', { method: 'GET'}, '', cookie);
+};
 
-
-export const callAPI = async <T>( uri: string, opts: RequestInit, apikey: string) => {
+export const callAPI = async <T>( uri: string, opts: RequestInit, apikey: string,  cookie?: string) => {
   const headers = {
     'x-api-key' :  apikey,
+    ...(cookie ? { 'Cookie': cookie } : {}),
     ...opts.headers
   };
 

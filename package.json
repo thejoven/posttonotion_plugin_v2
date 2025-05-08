@@ -19,17 +19,17 @@
     "@radix-ui/react-toast": "^1.2.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
-    "framer-motion": "11.11.9",
+    "motion": "12.0.0",
     "lucide-react": "0.453.0",
     "plasmo": "0.89.3",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "tailwind-merge": "^2.5.4",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "react-joyride": "2.9.3"
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "4.1.1",
-    "@types/chrome": "0.0.258",
     "@types/node": "20.11.5",
     "@types/react": "18.2.48",
     "@types/react-dom": "18.2.18",
@@ -43,10 +43,12 @@
     "permissions": [
       "storage",
       "activeTab",
-      "webRequest"
+      "webRequest",
+      "cookies"
     ],
     "host_permissions": [
-      "https://x.com/*"
+      "https://x.com/*",
+      "https://www.posttonotion.com/*"
     ],
     "default_locale": "en"
   }

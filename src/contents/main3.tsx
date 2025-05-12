@@ -161,6 +161,7 @@ const copytToNoion = async (tag:string, index:number) => {
   .then((data) => {
     // 处理成功响应
     ChangStates(index, SendStatus.Success);
+    showSuccessNotification();
   })
   .catch((error) => {
     ChangStates(index, SendStatus.Failed);

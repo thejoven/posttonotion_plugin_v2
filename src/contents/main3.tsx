@@ -158,10 +158,34 @@ const copytToNoion = async (tag:string, index:number) => {
       });
     });
   })
-  .then((data) => {
-    // 处理成功响应
-    ChangStates(index, SendStatus.Success);
-    showSuccessNotification();
+  .then((res) => {
+    // 获取当前浏览器使用的语言：chrome.i18n.getUILanguage()
+    var user_post_lange = chrome.i18n.getUILanguage();
+    var data = {
+      tag: tag,
+      twtter_data: res,
+      language_str: user_post_lange
+    };
+    fetch("https://www.posttonotion.com/api/notion", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apikey.toString()
+      },
+      body: JSON.stringify(data),
+    })
+      .then((response) => {
+        var result = response.json()
+        result.then((result) => {
+          if(result['error']){
+            ChangStates(index,SendStatus.Failed);
+            showErrorNotification(result['error']);
+          }else{
+            ChangStates(index,SendStatus.Success);
+            showSuccessNotification();
+          }
+        })
+      })
   })
   .catch((error) => {
     ChangStates(index, SendStatus.Failed);

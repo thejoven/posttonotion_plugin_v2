@@ -55,3 +55,40 @@ package-lock.json
 .gitignore
 
 .vscode
+ 
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# ESLint cache
+.eslintcache
+
+# macOS metadata (resource forks)
+.AppleDouble
+.LSOverride
+
+# Editor swap/backup files
+*.swp
+*.swo
+*~
+
+# Logs
+logs
+*.log
+
+# Misc caches
+.cache
+.parcel-cache
+
+# Direnv
+.envrc
+.direnv
+
+# Extension packages / archives
+*.crx
+*.zip
+
+# Coverage output (nyc/istanbul)
+.nyc_output
+
+# Claude local configs
+.claude/

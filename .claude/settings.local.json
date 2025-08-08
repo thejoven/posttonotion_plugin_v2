@@ -8,7 +8,13 @@
       "Bash(npm run lint)",
       "Bash(npm run dev)",
       "Bash(npx tsc:*)",
-      "Bash(npm run build)"
+      "Bash(npm run build)",
+      "Bash(git restore src/constants/index.ts src/contents/main3.tsx src/services/storageService.ts src/utils/index.ts .gitignore)",
+      "Bash(rm src/components/ProfileTagger.tsx)",
+      "Bash(rm:*)",
+      "Bash(touch:*)",
+      "Bash(git restore:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }

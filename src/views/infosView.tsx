@@ -1,58 +1,68 @@
-import React, { useEffect } from 'react';
-import { myStorage } from "~store"
-import { callAPI_getSetting } from "~api"
+import React, { useEffect, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { LayoutDashboard, Settings, Headphones, LogOut } from "lucide-react"
+import { authService, type AuthState } from "~services"
 
 function InfosView() {
-  const {
-    userInfo,
-    apiKey,
-    setUserInfo,
-    setApiKey,
-    setTags
-  } = myStorage();
-  const onLogout = async (values: any) => {
-    setApiKey(null);
-    setUserInfo(null);
-    setTags(null);
+  const [authState, setAuthState] = useState<AuthState>({
+    isAuthenticated: false,
+    apiKey: null,
+    userInfo: null,
+    tags: null,
+    authMethod: null
+  });
+
+  const onLogout = async () => {
+    await authService.logout();
   };
 
   useEffect(() => {
-    async function init() {
-      if(!apiKey){
-        return;
+    let mounted = true;
+
+    const loadAuthState = async () => {
+      const state = await authService.getAuthState();
+      if (mounted) {
+        setAuthState(state);
       }
       
-      const data = await callAPI_getSetting(apiKey);
-      if(!data['error']){
-        if(data['user']){
-            setUserInfo({
-              avatar: data['user']['avatar'],
-              username: data['user']['username'],
-              email: data['user']['email']
-            });
-        }
-        if(data['setting'] && data['setting']['user_tag_list']){
-          setTags(data['setting']['user_tag_list']);
-        }
+      // Refresh auth data to get latest user info and tags
+      await authService.refreshAuth();
+    };
+
+    const handleAuthStateChange = (newState: AuthState) => {
+      if (mounted) {
+        setAuthState(newState);
       }
-    }
-    init()
-  }, [apiKey])
+    };
+
+    loadAuthState();
+    authService.onAuthStateChange(handleAuthStateChange);
+
+    return () => {
+      mounted = false;
+      authService.removeAuthStateListener(handleAuthStateChange);
+    };
+  }, []);
   
   return (
         <Card  className="w-full max-w-md p-6">
           <CardContent className="p-0 space-y-6">
             <div className="flex flex-col items-center space-y-2">
               <Avatar className="w-20 h-20">
-                <AvatarImage src={userInfo?userInfo.avatar:""} alt={userInfo?userInfo.username:""} />
-                <AvatarFallback>?</AvatarFallback>
+                <AvatarImage src={authState.userInfo?.avatar || ""} alt={authState.userInfo?.username || ""} />
+                <AvatarFallback>{authState.userInfo?.username?.charAt(0) || "?"}</AvatarFallback>
               </Avatar>
-              <h2 className="text-xl font-semibold">{`${chrome.i18n.getMessage("welcome")} ${userInfo?userInfo.username:""}`}</h2>
-              <p className="text-sm text-gray-500">Email: {userInfo?userInfo.email:""}</p>
+              <h2 className="text-xl font-semibold">
+                {`${chrome.i18n.getMessage("welcome")} ${authState.userInfo?.username || ""}`}
+              </h2>
+              <p className="text-sm text-gray-500">Email: {authState.userInfo?.email || ""}</p>
+              {authState.authMethod && (
+                <p className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                  {authState.authMethod === 'web' ? '🌐 Web Login' : '🔑 API Key Login'}
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <Button variant="outline" className="w-full" onClick={() => window.open('https://www.posttonotion.com/dashboard/home', '_blank') }>

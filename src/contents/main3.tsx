@@ -4,18 +4,27 @@ import { motion, AnimatePresence } from "framer-motion"
 import { CheckCircle2, Loader2, CircleX  } from 'lucide-react'
 import React, { useState, useEffect, useRef  } from 'react';
 import logoImage from "data-base64:~/assets/icon.png"
-import { callAPI_getSetting } from "~api"
-import { myStorage } from "~store"
 import "~style.css"
 import { SquareUserRound } from "lucide-react"
 import { sendToBackground } from "@plasmohq/messaging"
-
+import { 
+  authService, 
+  apiService, 
+  notificationService,
+  SendStatus,
+  type AuthState,
+  type PostToNotionData,
+  isTweetPage,
+  getCurrentUrl,
+  getUserLanguage,
+  extractTweetId,
+  generateSearchText,
+  UI_CONFIG
+} from "~services"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://x.com/*"],
-  //world: "MAIN"
 }
-
 
 const HOST_ID = "react-root"
 export const getShadowHostId: PlasmoGetShadowHostId = () => HOST_ID
@@ -32,365 +41,221 @@ const MainOverlay = () => {
   const [isPressed, setIsPressed] = useState(false)
   const [sentStates, setSentStates] = useState<{ [key: number]: SendStatus }>({});
   const [isFullyExpanded, setIsFullyExpanded] = useState(false)
-  enum SendStatus {
-    Idle = 0,
-    Sending = 1,
-    Success = 2,
-    Failed = 3
-  }
+  const [authState, setAuthState] = useState<AuthState>({
+    isAuthenticated: false,
+    apiKey: null,
+    userInfo: null,
+    tags: null,
+    authMethod: null
+  });
   
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
-  const tweetRegex = /^https:\/\/x\.com\/[^/]+\/status\/\d+$/;
-
-  const {
-    apiKey,
-    setTags,
-    tags
-  } = myStorage();
 
   useEffect(() => {
-    setSentStates({})
-    if(apiKey || tags){
-       getTags();
-    }else{
-      setItems(null)
-    }
-  }, [apiKey,tags]);
+    let mounted = true;
 
-    
-  const getTags = async() => {
-      if(!apiKey){
-          return
-      }
-      const data = await callAPI_getSetting(apiKey);
-      if(!data['error']){
-        if(data['setting'] && data['setting']['user_tag_list']){
-          setTags(data['setting']['user_tag_list']);
-          setItems(data['setting']['user_tag_list'].split(','));
+    const loadAuthState = async () => {
+      const state = await authService.getAuthState();
+      if (mounted) {
+        setAuthState(state);
+        
+        if (state.isAuthenticated && state.tags) {
+          setItems(state.tags.split(','));
+        } else if (state.isAuthenticated) {
+          await refreshTags();
+        } else {
+          setItems(undefined);
         }
       }
+    };
+
+    const handleAuthStateChange = (newState: AuthState) => {
+      if (mounted) {
+        setAuthState(newState);
+        
+        if (newState.isAuthenticated && newState.tags) {
+          setItems(newState.tags.split(','));
+        } else {
+          setItems(undefined);
+        }
+      }
+    };
+
+    setSentStates({});
+    loadAuthState();
+    authService.onAuthStateChange(handleAuthStateChange);
+
+    return () => {
+      mounted = false;
+      authService.removeAuthStateListener(handleAuthStateChange);
+    };
+  }, []);
+
+  const refreshTags = async () => {
+    if (!authState.apiKey) return;
+    
+    try {
+      const refreshed = await authService.refreshAuth();
+      if (refreshed) {
+        const updatedState = await authService.getAuthState();
+        if (updatedState.tags) {
+          setItems(updatedState.tags.split(','));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh tags:', error);
+    }
   };
 
-  const expandTransition = {
-    type: "spring",
-    stiffness: 500,
-    damping: 40,
-    mass: 0.8
-  }
+  const expandTransition = UI_CONFIG.ANIMATION.SPRING;
   
   const handlePress = () => {
     setIsPressed(true)
     setTimeout(() => setIsPressed(false), 100)
   }
   
-  const tagOnClick  = (tag:string, index:number) => {
-      var currentUrl = window.location.href;
-      var isTweetPage = tweetRegex.test(currentUrl);
-      if(!isTweetPage){
-        showErrorNotification(chrome.i18n.getMessage("sub_err"));
-        return
-      }
-      copytToNoion(tag,index);
-  }
-      
-
-const copytToNoion = async (tag:string, index:number) => {
-
-
-  setSentStates(prevState => ({
-    ...prevState,
-    [index]: SendStatus.Sending
-  }));
-
-  
-  var currentUrl = window.location.href;
-  var newTweetId = currentUrl.match(/\d+$/);
-  var tweetId = "";
-  if (newTweetId) {
-    tweetId = newTweetId[0];
-  }
-  const apikey: String = apiKey ?? "";
-  if(apikey == "") {
-    showErrorNotification(chrome.i18n.getMessage("key"));
-    return
-  }
-  const getRequestHeaders = () => {
-    return new Promise<{ [key: string]: string }>((resolve, reject) => {
-      chrome.runtime.sendMessage({ action: "getRequestHeaders" }, (response) => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
-        } else {
-          resolve(response);
-        }
-      });
-    });
+  const tagOnClick = (tag: string, index: number) => {
+    const currentUrl = getCurrentUrl();
+    const isValidTweet = isTweetPage(currentUrl);
+    
+    if (!isValidTweet) {
+      notificationService.error(chrome.i18n.getMessage("sub_err") || "Please visit a tweet page");
+      return;
+    }
+    
+    postToNotion(tag, index);
   };
 
+  const postToNotion = async (tag: string, index: number) => {
+    if (!authState.apiKey) {
+      notificationService.error(chrome.i18n.getMessage("key") || "Please login first");
+      return;
+    }
 
-  getRequestHeaders().then((headers) => {
-    // 获取最新的 TweetDetail URL
+    setSentStates(prevState => ({
+      ...prevState,
+      [index]: SendStatus.Sending
+    }));
+
+    try {
+      const currentUrl = getCurrentUrl();
+      const tweetId = extractTweetId(currentUrl);
+      
+      if (!tweetId) {
+        changeSendState(index, SendStatus.Failed);
+        notificationService.error("Could not extract tweet ID");
+        return;
+      }
+
+      const twitterData = await getTweetData();
+      
+      if (!twitterData) {
+        changeSendState(index, SendStatus.Failed);
+        notificationService.error("Could not fetch tweet data");
+        return;
+      }
+
+      const postData: PostToNotionData = {
+        tag: tag,
+        twtter_data: twitterData,
+        language_str: getUserLanguage()
+      };
+
+      const result = await apiService.postToNotion(postData, authState.apiKey);
+      
+      if (result.error) {
+        changeSendState(index, SendStatus.Failed);
+        notificationService.error(result.error);
+      } else {
+        changeSendState(index, SendStatus.Success);
+        notificationService.success(chrome.i18n.getMessage("sub_successful") || "Successfully posted to Notion!");
+      }
+    } catch (error) {
+      changeSendState(index, SendStatus.Failed);
+      notificationService.error("Failed to post to Notion");
+      console.error("Post to Notion error:", error);
+    }
+  };
+
+  const getTweetData = async (): Promise<any> => {
     return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage({ action: "getLatestTweetDetailUrl" }, (response) => {
-        if (response) {
-          // 从 URL 中提取 tweetId
-          const urlParams = new URLSearchParams(response.split('?')[1]);
-          const variables = JSON.parse(decodeURIComponent(urlParams.get('variables') || '{}'));
-          const tweetId = variables.focalTweetId;
+      chrome.runtime.sendMessage({ action: "getRequestHeaders" }, (headers) => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+          return;
+        }
 
-          // 使用获取到的 URL 发送请求
+        chrome.runtime.sendMessage({ action: "getLatestTweetDetailUrl" }, (response) => {
+          if (!response) {
+            reject(new Error("No TweetDetail URL found"));
+            return;
+          }
+
           fetch(response.toString(), {
             method: "GET",
             headers: headers,
           })
-            .then((response) => response.json())
-            .then((data) => {
-              resolve(data);
-            })
-            .catch((error) => {
-              ChangStates(index, SendStatus.Failed);
-              console.error(error);
-              reject(error);
-            });
-        } else {
-          reject(new Error("No TweetDetail URL found"));
-        }
+            .then(response => response.json())
+            .then(data => resolve(data))
+            .catch(error => reject(error));
+        });
       });
     });
-  })
-  .then((res) => {
-    // 获取当前浏览器使用的语言：chrome.i18n.getUILanguage()
-    var user_post_lange = chrome.i18n.getUILanguage();
-    var data = {
-      tag: tag,
-      twtter_data: res,
-      language_str: user_post_lange
-    };
-    fetch("https://www.posttonotion.com/api/notion", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apikey.toString()
-      },
-      body: JSON.stringify(data),
-    })
-      .then((response) => {
-        var result = response.json()
-        result.then((result) => {
-          if(result['error']){
-            ChangStates(index,SendStatus.Failed);
-            showErrorNotification(result['error']);
-          }else{
-            ChangStates(index,SendStatus.Success);
-            showSuccessNotification();
-          }
-        })
-      })
-  })
-  .catch((error) => {
-    ChangStates(index, SendStatus.Failed);
-    console.error("Error:", error);
-  });
+  };
 
-};
-
-const ChangStates = (i:number,v:SendStatus) => {
-  setSentStates(prevState => ({
-    ...prevState,
-    [i]: v
-  }));
-  setTimeout(() => {
-    setSentStates(prevState => {
-      const newState = { ...prevState };
-      if(!newState[i])
-        return newState;
-      
-      delete newState[i];
-      return newState;
-    });
-  }, 1500);
-}
-
-const generateSearchText = (item): string => {
-  // 使用首字母作为检索文字
-  return item.charAt(0);
-}
-// 新增函数：显示提交成功的通知
-const showSuccessNotification = () => {
-  // 创建一个 div 元素来作为通知
-  const notificationDiv = document.createElement("div");
-  notificationDiv.innerHTML = chrome.i18n.getMessage("sub_successful");
-  notificationDiv.style.position = "fixed";
-  notificationDiv.style.bottom = "20px";
-  notificationDiv.style.left = "40px";
-  notificationDiv.style.backgroundColor = "green";
-  notificationDiv.style.color = "white";
-  notificationDiv.style.padding = "10px";
-  notificationDiv.style.borderRadius = "5px";
-  notificationDiv.style.zIndex = "10000";
-
-  // 将通知添加到页面上
-  document.body.appendChild(notificationDiv);
-
-  // 3秒后移除通知
-  setTimeout(() => {
-    document.body.removeChild(notificationDiv);
-  }, 3000);
-};
-
-// 新增函数：显示提交成功的通知
-const showErrorNotification = (msg) => {
-  // 创建一个 div 元素来作为通知
-  const notificationDiv = document.createElement("div");
-  notificationDiv.innerHTML = msg;
-  notificationDiv.style.position = "fixed";
-  notificationDiv.style.bottom = "20px";
-  notificationDiv.style.left = "40px";
-  notificationDiv.style.backgroundColor = "red";
-  notificationDiv.style.color = "white";
-  notificationDiv.style.padding = "10px";
-  notificationDiv.style.borderRadius = "5px";
-  notificationDiv.style.zIndex = "10000";
-
-  // 将通知添加到页面上
-  document.body.appendChild(notificationDiv);
-
-  // 3秒后移除通知
-  setTimeout(() => {
-    document.body.removeChild(notificationDiv);
-  }, 3000);
-};
-
-
-  
-return (
-  <div className=" flex items-center justify-start min-h-screen">
-    <motion.nav 
-      className={`fixed bottom-20 left-10  bg-white shadow-lg p-2 transition-all duration-200 ease-in-out rounded-2xl flex flex-col ${
-          isPressed ? 'scale-95 shadow-md' : 'scale-100 shadow-lg'
-      }`}
-      initial={false}
-      animate={{
-        width: isExpanded ? '240px' : '60px',
-      }}
-      transition={expandTransition}
-      onMouseDown={handlePress}
-      onTouchStart={handlePress}
-      onMouseEnter={() => setIsExpanded(true)}
-      onMouseLeave={() => {
-        setIsExpanded(false)
-        setIsFullyExpanded(false)
-      }}
-      onAnimationComplete={() => {
-        if (isExpanded) {
-          setIsFullyExpanded(true)
+  const changeSendState = (index: number, status: SendStatus) => {
+    setSentStates(prevState => ({
+      ...prevState,
+      [index]: status
+    }));
+    
+    setTimeout(() => {
+      setSentStates(prevState => {
+        const newState = { ...prevState };
+        if (newState[index]) {
+          delete newState[index];
         }
-      }}
-      style={{  width:'60px' }} 
-    >
-      <ul className="flex flex-col space-y-2 flex-grow">
-        { !apiKey ? 
-        (
-          <li>
-            <motion.button 
-              className={`w-full h-10 rounded-xl hover:bg-gray-100 transition-colors duration-200 flex items-center overflow-hidden ${
-                isExpanded ? 'justify-between px-3' : 'justify-center'
-              }`}
-              whileHover={{ backgroundColor: "#f3f4f6" }}
-              onClick={()=>sendToBackground({name: "nav"})}
-            >
-              <AnimatePresence mode="wait" initial={false}>
-                {isFullyExpanded ? (
-                  <motion.span
-                  key="full"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.1 }}
-                  className="text-gray-600 font-semibold text-sm whitespace-nowrap"
-                >
-                  {chrome.i18n.getMessage("login_login")}
-                </motion.span>
-              ) : (
-                <motion.span
-                  key="letter"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.1 }}
-                  className="text-gray-600 font-semibold text-sm"
-                >
-                  <SquareUserRound />
-                </motion.span>
-                )}
-              </AnimatePresence>
-            </motion.button>
-          </li>
-        ) :(
-          <li>
-          <motion.button 
-            className={`w-full h-10 rounded-xl hover:bg-gray-100 transition-colors duration-200 flex items-center overflow-hidden ${
-              isExpanded ? 'justify-between px-3' : 'justify-center'
-            }`}
-            whileHover={{ backgroundColor: "#f3f4f6" }}
-            onClick={()=>tagOnClick("auto_ai_posttonotion",-1)}
-            disabled={sentStates[-1]?true:false}
-          >
-            <AnimatePresence mode="wait" initial={false}>
-              {isFullyExpanded ? (
-                <motion.span
-                key="full"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.1 }}
-                className="text-gray-600 font-semibold text-sm whitespace-nowrap"
-              >
-                ✨{chrome.i18n.getMessage("tag_ai")}
-              </motion.span>
-            ) : (
-              <motion.span
-                key="letter"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.1 }}
-                className="text-gray-600 font-semibold text-sm"
-              >
-                ✨{generateSearchText(chrome.i18n.getMessage("tag_ai"))}
-              </motion.span>
-              )}
-            </AnimatePresence>
-            {isFullyExpanded && sentStates[-1] && (
-                  <motion.span
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.1 }}
-                    className="pointer-events-none"
-                  >
-                     {sentStates[-1] === SendStatus.Sending &&  <Loader2 className="w-5 h-5 animate-spin text-gray-500" /> || 
-                      sentStates[-1] === SendStatus.Success && <CheckCircle2 className="w-5 h-5 text-green-500" /> || 
-                      sentStates[-1] === SendStatus.Failed &&  <CircleX className="w-5 h-5 text-red-500" />}   
-                  </motion.span>
-              )}
-          </motion.button>
-        </li>
-        )}
-        
+        return newState;
+      });
+    }, 1500);
+  };
 
-
-
-        
-        {items?.map((item, index) => (           
-            <li key={index}>
+  return (
+    <div className=" flex items-center justify-start min-h-screen">
+      <motion.nav 
+        className={`fixed bottom-20 left-10  bg-white shadow-lg p-2 transition-all duration-200 ease-in-out rounded-2xl flex flex-col ${
+            isPressed ? 'scale-95 shadow-md' : 'scale-100 shadow-lg'
+        }`}
+        initial={false}
+        animate={{
+          width: isExpanded ? '240px' : '60px',
+        }}
+        transition={expandTransition}
+        onMouseDown={handlePress}
+        onTouchStart={handlePress}
+        onMouseEnter={() => setIsExpanded(true)}
+        onMouseLeave={() => {
+          setIsExpanded(false)
+          setIsFullyExpanded(false)
+        }}
+        onAnimationComplete={() => {
+          if (isExpanded) {
+            setIsFullyExpanded(true)
+          }
+        }}
+        style={{  width:'60px' }} 
+      >
+        <ul className="flex flex-col space-y-2 flex-grow">
+          { !authState.isAuthenticated ? 
+          (
+            <li>
               <motion.button 
                 className={`w-full h-10 rounded-xl hover:bg-gray-100 transition-colors duration-200 flex items-center overflow-hidden ${
                   isExpanded ? 'justify-between px-3' : 'justify-center'
                 }`}
                 whileHover={{ backgroundColor: "#f3f4f6" }}
-                onClick={()=>tagOnClick(item,index)}
-                disabled={sentStates[index]?true:false}
+                onClick={()=>sendToBackground({name: "nav"})}
               >
                 <AnimatePresence mode="wait" initial={false}>
                   {isFullyExpanded ? (
@@ -402,7 +267,7 @@ return (
                     transition={{ duration: 0.1 }}
                     className="text-gray-600 font-semibold text-sm whitespace-nowrap"
                   >
-                    {item}
+                    {chrome.i18n.getMessage("login_login") || "Login"}
                   </motion.span>
                 ) : (
                   <motion.span
@@ -413,45 +278,135 @@ return (
                     transition={{ duration: 0.1 }}
                     className="text-gray-600 font-semibold text-sm"
                   >
-                    {generateSearchText(item)}
+                    <SquareUserRound />
                   </motion.span>
                   )}
                 </AnimatePresence>
-                
-                {isFullyExpanded && sentStates[index] && (
-                  <motion.span
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.1 }}
-                    className="pointer-events-none"
-                  >
-                     {sentStates[index] === SendStatus.Sending &&  <Loader2 className="w-5 h-5 animate-spin text-gray-500" /> || 
-                      sentStates[index] === SendStatus.Success && <CheckCircle2 className="w-5 h-5 text-green-500" /> || 
-                      sentStates[index] === SendStatus.Failed &&  <CircleX className="w-5 h-5 text-red-500" />}   
-                  </motion.span>
-                )}
               </motion.button>
             </li>
-          ))}
-      </ul>
-      <motion.div className="mt-2 pt-2 border-t border-gray-200 flex items-center justify-center" style={{ height: '40px' }} >
-        <AnimatePresence mode="wait">
-            <motion.div key="logo" 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.1 }}
-              className="flex text-gray-600 font-semibold text-sm space-x-3">
-              <img src={logoImage} alt="PostToNotion Logo" width={20} height={20}  className="w-6 h-6"/>
-              {isFullyExpanded && <span className="truncate">Post to notion</span>}
-            </motion.div>         
-        </AnimatePresence>
-      </motion.div>
-    </motion.nav>
-  </div>
+          ) : (
+            <>
+              <li>
+                <motion.button 
+                  className={`w-full h-10 rounded-xl hover:bg-gray-100 transition-colors duration-200 flex items-center overflow-hidden ${
+                    isExpanded ? 'justify-between px-3' : 'justify-center'
+                  }`}
+                  whileHover={{ backgroundColor: "#f3f4f6" }}
+                  onClick={()=>tagOnClick("auto_ai_posttonotion",-1)}
+                  disabled={!!sentStates[-1]}
+                >
+                  <AnimatePresence mode="wait" initial={false}>
+                    {isFullyExpanded ? (
+                      <motion.span
+                      key="full"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.1 }}
+                      className="text-gray-600 font-semibold text-sm whitespace-nowrap"
+                    >
+                      ✨{chrome.i18n.getMessage("tag_ai") || "AI Tag"}
+                    </motion.span>
+                  ) : (
+                    <motion.span
+                      key="letter"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.1 }}
+                      className="text-gray-600 font-semibold text-sm"
+                    >
+                      ✨{generateSearchText(chrome.i18n.getMessage("tag_ai") || "AI")}
+                    </motion.span>
+                    )}
+                  </AnimatePresence>
+                  {isFullyExpanded && sentStates[-1] && (
+                        <motion.span
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.1 }}
+                          className="pointer-events-none"
+                        >
+                           {sentStates[-1] === SendStatus.Sending &&  <Loader2 className="w-5 h-5 animate-spin text-gray-500" /> || 
+                            sentStates[-1] === SendStatus.Success && <CheckCircle2 className="w-5 h-5 text-green-500" /> || 
+                            sentStates[-1] === SendStatus.Failed &&  <CircleX className="w-5 h-5 text-red-500" />}   
+                        </motion.span>
+                    )}
+                </motion.button>
+              </li>
+
+              {items?.map((item, index) => (           
+                  <li key={index}>
+                    <motion.button 
+                      className={`w-full h-10 rounded-xl hover:bg-gray-100 transition-colors duration-200 flex items-center overflow-hidden ${
+                        isExpanded ? 'justify-between px-3' : 'justify-center'
+                      }`}
+                      whileHover={{ backgroundColor: "#f3f4f6" }}
+                      onClick={()=>tagOnClick(item,index)}
+                      disabled={!!sentStates[index]}
+                    >
+                      <AnimatePresence mode="wait" initial={false}>
+                        {isFullyExpanded ? (
+                          <motion.span
+                          key="full"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -20 }}
+                          transition={{ duration: 0.1 }}
+                          className="text-gray-600 font-semibold text-sm whitespace-nowrap"
+                        >
+                          {item}
+                        </motion.span>
+                      ) : (
+                        <motion.span
+                          key="letter"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.1 }}
+                          className="text-gray-600 font-semibold text-sm"
+                        >
+                          {generateSearchText(item)}
+                        </motion.span>
+                        )}
+                      </AnimatePresence>
+                      
+                      {isFullyExpanded && sentStates[index] && (
+                        <motion.span
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.1 }}
+                          className="pointer-events-none"
+                        >
+                           {sentStates[index] === SendStatus.Sending &&  <Loader2 className="w-5 h-5 animate-spin text-gray-500" /> || 
+                            sentStates[index] === SendStatus.Success && <CheckCircle2 className="w-5 h-5 text-green-500" /> || 
+                            sentStates[index] === SendStatus.Failed &&  <CircleX className="w-5 h-5 text-red-500" />}   
+                        </motion.span>
+                      )}
+                    </motion.button>
+                  </li>
+                ))}
+            </>
+          )}
+        </ul>
+        <motion.div className="mt-2 pt-2 border-t border-gray-200 flex items-center justify-center" style={{ height: '40px' }} >
+          <AnimatePresence mode="wait">
+              <motion.div key="logo" 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.1 }}
+                className="flex text-gray-600 font-semibold text-sm space-x-3">
+                <img src={logoImage} alt="PostToNotion Logo" width={20} height={20}  className="w-6 h-6"/>
+                {isFullyExpanded && <span className="truncate">Post to notion</span>}
+              </motion.div>         
+          </AnimatePresence>
+        </motion.div>
+      </motion.nav>
+    </div>
   );
 };
 
 export default MainOverlay
-

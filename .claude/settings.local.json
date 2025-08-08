@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /Users/jwenlee/dev/code/posttonotion/posttonotion_plugin_v2/src/services)",
+      "Bash(mkdir -p /Users/jwenlee/dev/code/posttonotion/posttonotion_plugin_v2/src/types)",
+      "Bash(mkdir -p /Users/jwenlee/dev/code/posttonotion/posttonotion_plugin_v2/src/utils)",
+      "Bash(mkdir:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run dev)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build)"
+    ],
+    "deny": []
+  }
+}

@@ -43,10 +43,12 @@
     "permissions": [
       "storage",
       "activeTab",
-      "webRequest"
+      "webRequest",
+      "tabs"
     ],
     "host_permissions": [
-      "https://x.com/*"
+      "https://x.com/*",
+      "https://www.posttonotion.com/*"
     ],
     "default_locale": "en"
   }

@@ -14,7 +14,9 @@
       "Bash(rm:*)",
       "Bash(touch:*)",
       "Bash(git restore:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(ls:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }

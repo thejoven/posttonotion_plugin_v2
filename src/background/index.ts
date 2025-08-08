@@ -1,8 +1,9 @@
+// Background script for PostToNotion extension
+// Handles communication between content scripts and Chrome API
 import { generateClientTransactionId as generateTransactionId, initializeTransactionId } from '../lib/transaction_id';
 
 const requestHeaders: { [key: string]: string } = {};
 let latestTweetDetailUrl: string = '';
-
 
 // 生成 UUID 的函数
 function generateUUID(): string {
@@ -49,13 +50,38 @@ chrome.webRequest.onBeforeSendHeaders.addListener((details) => {
   }
 }, { urls: ["*://x.com/*"] }, ["requestHeaders"]);
 
-// Message listener to handle requests from content script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "getRequestHeaders") {
-    sendResponse(requestHeaders);
-  } else if (message.action === "getLatestTweetDetailUrl") {
-    sendResponse(latestTweetDetailUrl);
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('Background received message:', request);
+  
+  switch (request.action) {
+    case 'openOptionsPage':
+      // 打开扩展选项页面
+      chrome.runtime.openOptionsPage();
+      sendResponse({ success: true });
+      return true;
+    
+    case 'getRequestHeaders':
+      console.log("Sending headers:", requestHeaders);
+      sendResponse(requestHeaders);
+      return true;
+    
+    case 'getLatestTweetDetailUrl':
+      console.log("Sending URL:", latestTweetDetailUrl);
+      
+      // Validate URL before sending
+      if (!latestTweetDetailUrl || !latestTweetDetailUrl.includes('TweetDetail')) {
+        console.error("Invalid or empty TweetDetail URL:", latestTweetDetailUrl);
+        sendResponse(null);
+      } else {
+        sendResponse(latestTweetDetailUrl);
+      }
+      return true;
+    
+    default:
+      console.log('Unknown action:', request.action);
+      sendResponse({ success: false, error: 'Unknown action' });
+      return true;
   }
-  return true; // Indicate that the response will be sent asynchronously
 });
 
+console.log('PostToNotion background script loaded');

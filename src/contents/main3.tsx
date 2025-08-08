@@ -182,23 +182,55 @@ const MainOverlay = () => {
     return new Promise((resolve, reject) => {
       chrome.runtime.sendMessage({ action: "getRequestHeaders" }, (headers) => {
         if (chrome.runtime.lastError) {
+          console.error("Failed to get headers:", chrome.runtime.lastError);
           reject(chrome.runtime.lastError);
           return;
         }
 
         chrome.runtime.sendMessage({ action: "getLatestTweetDetailUrl" }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.error("Failed to get URL:", chrome.runtime.lastError);
+            reject(chrome.runtime.lastError);
+            return;
+          }
+
           if (!response) {
+            console.error("No TweetDetail URL found");
             reject(new Error("No TweetDetail URL found"));
             return;
           }
 
-          fetch(response.toString(), {
+          // Ensure response is a string
+          const url = typeof response === 'string' ? response : String(response);
+          console.log("Fetching tweet data from URL:", url);
+          console.log("Using headers:", headers);
+
+          // Validate URL format
+          if (!url.includes('TweetDetail') || url.includes('undefined') || url.includes('[object')) {
+            console.error("Invalid URL format:", url);
+            reject(new Error("Invalid TweetDetail URL format"));
+            return;
+          }
+
+          fetch(url, {
             method: "GET",
             headers: headers,
           })
-            .then(response => response.json())
-            .then(data => resolve(data))
-            .catch(error => reject(error));
+            .then(response => {
+              console.log("Response status:", response.status);
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+              }
+              return response.json();
+            })
+            .then(data => {
+              console.log("Tweet data fetched successfully:", data);
+              resolve(data);
+            })
+            .catch(error => {
+              console.error("Fetch error:", error);
+              reject(error);
+            });
         });
       });
     });
